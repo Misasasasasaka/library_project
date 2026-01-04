@@ -1,0 +1,11 @@
+import{l as h,c as P,a as l,y as k,o as d,b,F as m,j as p,n as v,t as C}from"./index-BneSkAzL.js";/**
+ * @license lucide-vue-next v0.562.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const B=h("loader-circle",[["path",{d:"M21 12a9 9 0 1 1-6.219-8.56",key:"13zald"}]]);/**
+ * @license lucide-vue-next v0.562.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const S=h("search",[["path",{d:"m21 21-4.34-4.34",key:"14j7rj"}],["circle",{cx:"11",cy:"11",r:"8",key:"4ej97u"}]]),w={key:0,class:"flex items-center justify-center gap-1"},j=["disabled"],M={key:0,class:"px-2 text-text-muted"},N=["onClick"],L=["disabled"],$={__name:"Pagination",props:{currentPage:{type:Number,required:!0},totalPages:{type:Number,required:!0},maxVisible:{type:Number,default:5}},emits:["change"],setup(a,{emit:g}){const i=a,x=g,y=P(()=>{const e=[],t=i.totalPages,r=i.currentPage,o=i.maxVisible;if(t<=o){for(let s=1;s<=t;s++)e.push(s);return e}const f=Math.floor(o/2);let n=Math.max(1,r-f),c=Math.min(t,n+o-1);c-n<o-1&&(n=Math.max(1,c-o+1)),n>1&&(e.push(1),n>2&&e.push("..."));for(let s=n;s<=c;s++)s!==1&&s!==t&&e.push(s);return c<t&&(c<t-1&&e.push("..."),e.push(t)),e});function u(e){e>=1&&e<=i.totalPages&&e!==i.currentPage&&x("change",e)}return(e,t)=>a.totalPages>1?(d(),l("div",w,[b("button",{onClick:t[0]||(t[0]=r=>u(a.currentPage-1)),disabled:a.currentPage===1,class:"px-3 py-2 text-sm rounded-lg border border-border bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sidebar transition-colors"}," 上一页 ",8,j),(d(!0),l(m,null,p(y.value,r=>(d(),l(m,{key:r},[r==="..."?(d(),l("span",M,"...")):(d(),l("button",{key:1,onClick:o=>u(r),class:v(["px-3 py-2 text-sm rounded-lg border transition-colors",r===a.currentPage?"bg-claude-500 text-white border-claude-500":"border-border bg-white hover:bg-sidebar"])},C(r),11,N))],64))),128)),b("button",{onClick:t[1]||(t[1]=r=>u(a.currentPage+1)),disabled:a.currentPage===a.totalPages,class:"px-3 py-2 text-sm rounded-lg border border-border bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sidebar transition-colors"}," 下一页 ",8,L)])):k("",!0)}};export{B as L,S,$ as _};

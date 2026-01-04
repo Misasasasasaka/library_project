@@ -48,7 +48,16 @@ def _effective_status(borrow: Borrow) -> str:
     return borrow.status
 
 
-def _serialize_borrow(borrow: Borrow):
+def _serialize_borrow(borrow: Borrow, request=None):
+    cover_url = None
+    if getattr(borrow.book, "cover", None):
+        try:
+            cover_url = borrow.book.cover.url
+            if request is not None:
+                cover_url = request.build_absolute_uri(cover_url)
+        except Exception:
+            cover_url = None
+
     return {
         "id": borrow.id,
         "user": {"id": borrow.user_id, "username": borrow.user.get_username()},
@@ -56,6 +65,7 @@ def _serialize_borrow(borrow: Borrow):
             "id": borrow.book_id,
             "title": borrow.book.title,
             "isbn": borrow.book.isbn,
+            "cover_url": cover_url,
         },
         "borrow_date": borrow.borrow_date.isoformat() if borrow.borrow_date else None,
         "due_date": borrow.due_date.isoformat() if borrow.due_date else None,
@@ -90,7 +100,7 @@ def borrows_collection(request):
             else:
                 qs = qs.filter(status=status)
 
-        results = [_serialize_borrow(b) for b in qs]
+        results = [_serialize_borrow(b, request=request) for b in qs]
         return _json_response({"ok": True, "count": len(results), "results": results})
 
     data = _parse_json(request)
@@ -126,7 +136,7 @@ def borrows_collection(request):
         return _json_error(message, status=400)
 
     borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
-    return _json_response({"ok": True, "borrow": _serialize_borrow(borrow)}, status=201)
+    return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)}, status=201)
 
 
 @require_http_methods(["POST"])
@@ -143,7 +153,7 @@ def return_borrow(request, borrow_id: int):
         return _json_error("无权限", status=403)
 
     if borrow.status == Borrow.Status.RETURNED:
-        return _json_response({"ok": True, "borrow": _serialize_borrow(borrow)})
+        return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)})
 
     borrow.status = Borrow.Status.RETURNED
     borrow.return_date = timezone.now()
@@ -155,7 +165,7 @@ def return_borrow(request, borrow_id: int):
         return _json_error(message, status=400)
 
     borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
-    return _json_response({"ok": True, "borrow": _serialize_borrow(borrow)})
+    return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)})
 
 
 @require_http_methods(["POST"])
@@ -196,7 +206,7 @@ def renew_borrow(request, borrow_id: int):
         return _json_error(message, status=400)
 
     borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
-    return _json_response({"ok": True, "borrow": _serialize_borrow(borrow)})
+    return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)})
 
 
 @require_http_methods(["GET"])

@@ -68,6 +68,83 @@ def _serialize_book(book: Book, request=None):
     }
 
 
+def _serialize_category(category: Category):
+    return {
+        "id": category.id,
+        "name": category.name,
+        "description": category.description,
+    }
+
+
+@require_http_methods(["GET", "POST"])
+def categories_collection(request):
+    if request.method == "GET":
+        qs = Category.objects.all().order_by("name")
+        kw = (request.GET.get("kw") or "").strip()
+        if kw:
+            qs = qs.filter(name__icontains=kw)
+        results = [_serialize_category(cat) for cat in qs]
+        return _json_response({"ok": True, "count": len(results), "results": results})
+
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    data = _parse_json(request)
+    if data is None:
+        return _json_error("JSON 格式错误", status=400)
+
+    name = (data.get("name") or "").strip()
+    description = (data.get("description") or "").strip()
+    if not name:
+        return _json_error("name 不能为空", status=400)
+
+    category = Category(name=name, description=description)
+    try:
+        category.full_clean()
+        category.save()
+    except Exception:
+        return _json_error("创建失败：分类名称可能已存在", status=400)
+
+    return _json_response({"ok": True, "category": _serialize_category(category)}, status=201)
+
+
+@require_http_methods(["GET", "PATCH", "DELETE"])
+def category_item(request, category_id: int):
+    try:
+        category = Category.objects.get(pk=category_id)
+    except Category.DoesNotExist:
+        return _json_error("分类不存在", status=404)
+
+    if request.method == "GET":
+        return _json_response({"ok": True, "category": _serialize_category(category)})
+
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    if request.method == "DELETE":
+        category.delete()
+        return _json_response({"ok": True})
+
+    data = _parse_json(request)
+    if data is None:
+        return _json_error("JSON 格式错误", status=400)
+
+    if "name" in data:
+        category.name = (data.get("name") or "").strip()
+    if "description" in data:
+        category.description = (data.get("description") or "").strip()
+    if not category.name:
+        return _json_error("name 不能为空", status=400)
+
+    try:
+        category.full_clean()
+        category.save()
+    except Exception:
+        return _json_error("更新失败：分类名称可能已存在", status=400)
+
+    return _json_response({"ok": True, "category": _serialize_category(category)})
+
+
 @require_http_methods(["GET", "POST"])
 def books_collection(request):
     if request.method == "GET":
@@ -248,6 +325,53 @@ def book_item(request, book_id: int):
         book.save()
     except Exception:
         return _json_error("更新失败：请检查字段/ISBN 是否重复", status=400)
+
+    return _json_response({"ok": True, "book": _serialize_book(book, request=request)})
+
+
+@require_http_methods(["POST", "DELETE"])
+def book_cover(request, book_id: int):
+    try:
+        book = Book.objects.select_related("category").get(pk=book_id)
+    except Book.DoesNotExist:
+        return _json_error("图书不存在", status=404)
+
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    if request.method == "DELETE":
+        if book.cover:
+            try:
+                book.cover.delete(save=False)
+            except Exception:
+                pass
+            book.cover = None
+            book.save()
+        return _json_response({"ok": True, "book": _serialize_book(book, request=request)})
+
+    uploaded = request.FILES.get("cover") or request.FILES.get("file")
+    if not uploaded:
+        return _json_error("cover 为必填", status=400)
+
+    content_type = (getattr(uploaded, "content_type", None) or "").lower()
+    if content_type and not content_type.startswith("image/"):
+        return _json_error("仅支持图片文件", status=400)
+
+    max_size = 5 * 1024 * 1024
+    if getattr(uploaded, "size", 0) and uploaded.size > max_size:
+        return _json_error("图片大小不能超过 5MB", status=400)
+
+    if book.cover:
+        try:
+            book.cover.delete(save=False)
+        except Exception:
+            pass
+
+    book.cover = uploaded
+    try:
+        book.save()
+    except Exception:
+        return _json_error("上传失败", status=400)
 
     return _json_response({"ok": True, "book": _serialize_book(book, request=request)})
 

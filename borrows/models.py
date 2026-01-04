@@ -126,3 +126,30 @@ class Borrow(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} - {self.book_id} ({self.status})"
+
+
+class OverdueMailLog(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("用户"),
+        on_delete=models.CASCADE,
+        related_name="overdue_mail_logs",
+    )
+    mail = models.EmailField(_("收件邮箱"), blank=True)
+    sent_date = models.DateField(_("发送日期"))
+    sent_at = models.DateTimeField(_("发送时间"), auto_now_add=True)
+    borrow_count = models.PositiveIntegerField(_("逾期条数"), default=0)
+
+    class Meta:
+        verbose_name = _("逾期通知日志")
+        verbose_name_plural = _("逾期通知日志")
+        ordering = ["-sent_date", "-sent_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "sent_date"],
+                name="overduemaillog_unique_user_sent_date",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} {self.sent_date} ({self.borrow_count})"

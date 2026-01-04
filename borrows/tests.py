@@ -1,13 +1,17 @@
 from datetime import timedelta
+import io
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core import mail
 from django.test import TestCase
+from django.test import override_settings
 from django.utils import timezone
 
 from books.models import Book
 
-from .models import Borrow
+from .models import Borrow, OverdueMailLog
 
 
 class BorrowModelTests(TestCase):
@@ -83,3 +87,53 @@ class BorrowModelTests(TestCase):
         borrow.full_clean()
         with self.assertRaises(ValidationError):
             borrow.save()
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    DEFAULT_FROM_EMAIL="no-reply@example.com",
+)
+class OverdueEmailCommandTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="overdue_user",
+            password="pass12345",
+            mail="overdue@example.com",
+        )
+        self.book = Book.objects.create(
+            title="Overdue Book",
+            author="Author",
+            isbn="ISBN-OVERDUE-0001",
+            total_copies=1,
+            available_copies=1,
+            status=Book.Status.ON_SHELF,
+        )
+
+    def test_send_overdue_emails_creates_log_and_dedupes(self):
+        Borrow.objects.create(
+            user=self.user,
+            book=self.book,
+            due_date=timezone.localdate() - timedelta(days=1),
+            status=Borrow.Status.BORROWED,
+        )
+
+        call_command("send_overdue_emails", verbosity=0, stdout=io.StringIO())
+        self.assertEqual(OverdueMailLog.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+
+        call_command("send_overdue_emails", verbosity=0, stdout=io.StringIO())
+        self.assertEqual(OverdueMailLog.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_send_overdue_emails_dry_run_does_not_persist(self):
+        Borrow.objects.create(
+            user=self.user,
+            book=self.book,
+            due_date=timezone.localdate() - timedelta(days=1),
+            status=Borrow.Status.BORROWED,
+        )
+
+        call_command("send_overdue_emails", "--dry-run", verbosity=0, stdout=io.StringIO())
+        self.assertEqual(OverdueMailLog.objects.count(), 0)
+        self.assertEqual(len(mail.outbox), 0)

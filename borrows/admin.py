@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Borrow
+from .models import Borrow, OverdueMailLog
 
 
 @admin.register(Borrow)
@@ -24,3 +24,11 @@ class BorrowAdmin(admin.ModelAdmin):
         self.message_user(request, f"已标记 {updated} 条记录为归还")
 
     actions = ("mark_returned",)
+
+
+@admin.register(OverdueMailLog)
+class OverdueMailLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "mail", "sent_date", "sent_at", "borrow_count")
+    list_filter = ("sent_date",)
+    search_fields = ("user__username", "mail")
+    date_hierarchy = "sent_at"

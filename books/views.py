@@ -2,10 +2,12 @@ import json
 from datetime import date
 
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods
 
+from .admin_csv import export_books_to_csv, import_books_from_csv, wrap_uploaded_file
 from .models import Book, Category
 
 
@@ -29,6 +31,10 @@ def _is_admin(user) -> bool:
     if not user.is_authenticated:
         return False
     return getattr(user, "role", None) == "admin" or user.is_staff or user.is_superuser
+
+
+def _truthy(value) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _serialize_book(book: Book, request=None):
@@ -244,3 +250,48 @@ def book_item(request, book_id: int):
         return _json_error("更新失败：请检查字段/ISBN 是否重复", status=400)
 
     return _json_response({"ok": True, "book": _serialize_book(book, request=request)})
+
+
+@require_http_methods(["GET"])
+def admin_books_export(request):
+    if not request.user.is_authenticated:
+        return _json_error("未登录", status=401)
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    today = timezone.localdate().isoformat()
+    filename = f"books_{today}.csv"
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.write("\ufeff")
+
+    export_books_to_csv(Book.objects.all(), response)
+    return response
+
+
+@require_http_methods(["POST"])
+def admin_books_import(request):
+    if not request.user.is_authenticated:
+        return _json_error("未登录", status=401)
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    uploaded = request.FILES.get("file")
+    if not uploaded:
+        return _json_error("file 为必填", status=400)
+
+    dry_run = _truthy(request.GET.get("dry_run"))
+    atomic = _truthy(request.GET.get("atomic"))
+
+    try:
+        try:
+            uploaded.file.seek(0)
+        except Exception:
+            pass
+        with wrap_uploaded_file(uploaded.file) as f:
+            result = import_books_from_csv(f, dry_run=dry_run, atomic=atomic)
+    except Exception as exc:
+        return _json_error(f"导入失败：{exc}", status=400)
+
+    return _json_response(result)

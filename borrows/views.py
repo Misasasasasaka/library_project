@@ -1,14 +1,19 @@
 import json
 from datetime import timedelta
 
-from django.http import JsonResponse
+from django.conf import settings
+from django.core.mail import send_mail
+from django.db import IntegrityError
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods
 
 from books.models import Book
 
-from .models import Borrow
+from .admin_csv import export_borrows_to_csv
+from .models import Borrow, OverdueMailLog
+from .overdue import build_overdue_email, overdue_borrows_qs, serialize_overdue_item
 
 
 def _json_response(payload, *, status=200):
@@ -31,6 +36,10 @@ def _is_admin(user) -> bool:
     if not user.is_authenticated:
         return False
     return getattr(user, "role", None) == "admin" or user.is_staff or user.is_superuser
+
+
+def _truthy(value) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _effective_status(borrow: Borrow) -> str:
@@ -188,3 +197,177 @@ def renew_borrow(request, borrow_id: int):
 
     borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
     return _json_response({"ok": True, "borrow": _serialize_borrow(borrow)})
+
+
+@require_http_methods(["GET"])
+def admin_borrows_export(request):
+    if not request.user.is_authenticated:
+        return _json_error("未登录", status=401)
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    today = timezone.localdate().isoformat()
+    filename = f"borrows_{today}.csv"
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.write("\ufeff")
+
+    export_borrows_to_csv(Borrow.objects.all(), response)
+    return response
+
+
+@require_http_methods(["GET"])
+def admin_overdue_preview(request):
+    if not request.user.is_authenticated:
+        return _json_error("未登录", status=401)
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    today = timezone.localdate()
+    sent_user_ids = set(
+        OverdueMailLog.objects.filter(sent_date=today).values_list("user_id", flat=True)
+    )
+
+    groups: dict[int, dict] = {}
+    for borrow in overdue_borrows_qs(today):
+        user = borrow.user
+        group = groups.get(user.id)
+        if group is None:
+            group = {
+                "user": {"id": user.id, "username": user.get_username(), "mail": getattr(user, "mail", None)},
+                "already_sent": user.id in sent_user_ids,
+                "items": [],
+            }
+            groups[user.id] = group
+        group["items"].append(serialize_overdue_item(borrow, today=today))
+
+    results = []
+    for group in groups.values():
+        results.append(
+            {
+                "user": group["user"],
+                "already_sent": group["already_sent"],
+                "borrow_count": len(group["items"]),
+                "items": group["items"],
+            }
+        )
+
+    return _json_response(
+        {"ok": True, "date": today.isoformat(), "user_count": len(results), "results": results}
+    )
+
+
+@require_http_methods(["POST"])
+def admin_overdue_send(request):
+    if not request.user.is_authenticated:
+        return _json_error("未登录", status=401)
+    if not _is_admin(request.user):
+        return _json_error("无权限", status=403)
+
+    dry_run = _truthy(request.GET.get("dry_run"))
+    force = _truthy(request.GET.get("force"))
+
+    today = timezone.localdate()
+    existing_user_ids = set(
+        OverdueMailLog.objects.filter(sent_date=today).values_list("user_id", flat=True)
+    )
+    grouped: dict[int, list[Borrow]] = {}
+    users: dict[int, object] = {}
+    for borrow in overdue_borrows_qs(today):
+        grouped.setdefault(borrow.user_id, []).append(borrow)
+        users[borrow.user_id] = borrow.user
+
+    sent = 0
+    skipped_no_mail = 0
+    skipped_already_sent = 0
+    failed = 0
+    details: list[dict] = []
+
+    for user_id, items in grouped.items():
+        user = users[user_id]
+        mail = (getattr(user, "mail", None) or "").strip()
+        if not mail:
+            skipped_no_mail += 1
+            details.append({"user_id": user_id, "status": "skipped_no_mail", "borrow_count": len(items)})
+            continue
+
+        if (not force) and (user_id in existing_user_ids):
+            skipped_already_sent += 1
+            details.append(
+                {"user_id": user_id, "mail": mail, "status": "skipped_already_sent", "borrow_count": len(items)}
+            )
+            continue
+
+        if dry_run:
+            details.append({"user_id": user_id, "mail": mail, "status": "dry_run", "borrow_count": len(items)})
+            sent += 1
+            continue
+
+        log = None
+        if not force:
+            try:
+                log, created_log = OverdueMailLog.objects.get_or_create(
+                    user=user,
+                    sent_date=today,
+                    defaults={"mail": mail, "borrow_count": len(items)},
+                )
+            except IntegrityError:
+                created_log = False
+
+            if not created_log:
+                skipped_already_sent += 1
+                existing_user_ids.add(user_id)
+                details.append(
+                    {
+                        "user_id": user_id,
+                        "mail": mail,
+                        "status": "skipped_already_sent",
+                        "borrow_count": len(items),
+                    }
+                )
+                continue
+            existing_user_ids.add(user_id)
+
+        subject, message = build_overdue_email(user, items, today=today)
+        try:
+            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or None
+            send_mail(subject, message, from_email, [mail], fail_silently=False)
+            if force:
+                OverdueMailLog.objects.update_or_create(
+                    user=user,
+                    sent_date=today,
+                    defaults={
+                        "mail": mail,
+                        "borrow_count": len(items),
+                        "sent_at": timezone.now(),
+                    },
+                )
+            sent += 1
+            details.append({"user_id": user_id, "mail": mail, "status": "sent", "borrow_count": len(items)})
+        except Exception as exc:
+            if log is not None:
+                OverdueMailLog.objects.filter(pk=log.pk).delete()
+            failed += 1
+            details.append(
+                {
+                    "user_id": user_id,
+                    "mail": mail,
+                    "status": "failed",
+                    "borrow_count": len(items),
+                    "message": str(exc),
+                }
+            )
+
+    return _json_response(
+        {
+            "ok": True,
+            "dry_run": dry_run,
+            "date": today.isoformat(),
+            "sent": sent,
+            "skipped_no_mail": skipped_no_mail,
+            "skipped_already_sent": skipped_already_sent,
+            "failed": failed,
+            "details": details,
+        }
+    )

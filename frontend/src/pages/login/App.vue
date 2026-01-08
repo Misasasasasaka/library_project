@@ -6,7 +6,7 @@
         <div class="w-16 h-16 bg-claude-500 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:bg-claude-600 transition-colors">
           <Library class="w-8 h-8 text-white" :stroke-width="2" />
         </div>
-        <h1 class="mt-6 text-2xl font-semibold text-text-primary group-hover:text-claude-600 transition-colors">智慧图书馆</h1>
+        <h1 class="mt-6 text-2xl font-semibold text-text-primary group-hover:text-claude-600 transition-colors">图书馆</h1>
         <p class="mt-2 text-text-muted">欢迎回来，请登录您的账户</p>
       </router-link>
 

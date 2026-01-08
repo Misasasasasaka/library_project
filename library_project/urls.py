@@ -15,6 +15,7 @@ urlpatterns = [
     path("api/auth/", include("users.urls")),
     path("api/", include("books.urls")),
     path("api/", include("borrows.urls")),
+    path("api/", include("ai.urls")),
 
     # SPA 前端路由 - 所有非 API 路由都返回 index.html
     re_path(r'^(?!api/)(?!admin/)(?!media/)(?!static/).*$', views.spa_view, name='spa'),

@@ -16,7 +16,7 @@
           collapsed ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
         ]"
       >
-        智慧图书馆
+        图书馆
       </span>
     </router-link>
 

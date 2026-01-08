@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'borrows.apps.BorrowsConfig',
-    'books.apps.BooksConfig'
+    'books.apps.BooksConfig',
+    'ai.apps.AiConfig',
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -151,3 +152,10 @@ EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "").strip().lower() in {"1", "true", 
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# AI 推荐功能配置
+AI_API_KEY = os.getenv("AI_API_KEY", "")
+AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", "https://api.openai.com/v1")
+AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
+AI_MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "1024"))
+AI_TEMPERATURE = float(os.getenv("AI_TEMPERATURE", "0.7"))

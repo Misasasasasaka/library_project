@@ -1,21 +1,27 @@
 {
-  "_DataTable-B5qw0pmj.js": {
-    "file": "js/DataTable-B5qw0pmj.js",
-    "name": "DataTable",
+  "_Modal-!~{00c}~.js": {
+    "file": "css/Modal-2Se8OBYn.css",
+    "src": "_Modal-!~{00c}~.js"
+  },
+  "_Modal-C3O8S5He.js": {
+    "file": "js/Modal-C3O8S5He.js",
+    "name": "Modal",
     "imports": [
-      "_Pagination-BWsnICMh.js",
       "index.html"
+    ],
+    "css": [
+      "css/Modal-2Se8OBYn.css"
     ]
   },
-  "_Pagination-BWsnICMh.js": {
-    "file": "js/Pagination-BWsnICMh.js",
+  "_Pagination-B8qsCkL_.js": {
+    "file": "js/Pagination-B8qsCkL_.js",
     "name": "Pagination",
     "imports": [
       "index.html"
     ]
   },
   "index.html": {
-    "file": "js/index-BneSkAzL.js",
+    "file": "js/index-DwFnw12e.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -31,36 +37,33 @@
       "src/pages/admin-overdue/App.vue"
     ],
     "css": [
-      "css/index-gENgasL8.css"
+      "css/index-B2QyoaGH.css"
     ]
   },
   "src/pages/admin-books/App.vue": {
-    "file": "js/App-CPYBIeqw.js",
+    "file": "js/App-C5eBieBb.js",
     "name": "App",
     "src": "src/pages/admin-books/App.vue",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_DataTable-B5qw0pmj.js",
-      "_Pagination-BWsnICMh.js"
-    ],
-    "css": [
-      "css/App-2Se8OBYn.css"
+      "_Modal-C3O8S5He.js",
+      "_Pagination-B8qsCkL_.js"
     ]
   },
   "src/pages/admin-borrows/App.vue": {
-    "file": "js/App-rBi6lXbg.js",
+    "file": "js/App-BfIv_oeg.js",
     "name": "App",
     "src": "src/pages/admin-borrows/App.vue",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_DataTable-B5qw0pmj.js",
-      "_Pagination-BWsnICMh.js"
+      "_Modal-C3O8S5He.js",
+      "_Pagination-B8qsCkL_.js"
     ]
   },
   "src/pages/admin-import/App.vue": {
-    "file": "js/App-CdrUGnMA.js",
+    "file": "js/App-n3z-xMSA.js",
     "name": "App",
     "src": "src/pages/admin-import/App.vue",
     "isDynamicEntry": true,
@@ -69,7 +72,7 @@
     ]
   },
   "src/pages/admin-overdue/App.vue": {
-    "file": "js/App-BGmUY7mK.js",
+    "file": "js/App-CpMAeFL6.js",
     "name": "App",
     "src": "src/pages/admin-overdue/App.vue",
     "isDynamicEntry": true,
@@ -78,7 +81,7 @@
     ]
   },
   "src/pages/book-detail/App.vue": {
-    "file": "js/App-B8vmCYeo.js",
+    "file": "js/App-D2s6MHgw.js",
     "name": "App",
     "src": "src/pages/book-detail/App.vue",
     "isDynamicEntry": true,
@@ -87,17 +90,17 @@
     ]
   },
   "src/pages/books/App.vue": {
-    "file": "js/App-D5lv88Yg.js",
+    "file": "js/App-Zq1SA79G.js",
     "name": "App",
     "src": "src/pages/books/App.vue",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_Pagination-BWsnICMh.js"
+      "_Pagination-B8qsCkL_.js"
     ]
   },
   "src/pages/login/App.vue": {
-    "file": "js/App-Cm7OE1Ep.js",
+    "file": "js/App-701s_NQh.js",
     "name": "App",
     "src": "src/pages/login/App.vue",
     "isDynamicEntry": true,
@@ -106,7 +109,7 @@
     ]
   },
   "src/pages/my-borrows/App.vue": {
-    "file": "js/App-xxgpRTEB.js",
+    "file": "js/App-B4Ten56P.js",
     "name": "App",
     "src": "src/pages/my-borrows/App.vue",
     "isDynamicEntry": true,
@@ -115,7 +118,7 @@
     ]
   },
   "src/pages/register/App.vue": {
-    "file": "js/App-C5DXCoH4.js",
+    "file": "js/App-CaE8hFVH.js",
     "name": "App",
     "src": "src/pages/register/App.vue",
     "isDynamicEntry": true,

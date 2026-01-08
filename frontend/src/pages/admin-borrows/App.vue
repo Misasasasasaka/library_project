@@ -47,6 +47,9 @@
           <div class="text-xs text-text-muted font-mono">{{ row.book?.isbn }}</div>
         </div>
       </template>
+      <template #copy="{ row }">
+        <span class="font-mono text-xs bg-sidebar px-2 py-1 rounded">{{ row.copy?.code || '-' }}</span>
+      </template>
       <template #borrow_date="{ value }">
         <span class="whitespace-nowrap">{{ formatDate(value) }}</span>
       </template>
@@ -117,6 +120,7 @@ const columns = [
   { key: 'id', title: 'ID', width: '60px' },
   { key: 'user', title: '用户' },
   { key: 'book', title: '图书' },
+  { key: 'copy', title: '副本', width: '90px' },
   { key: 'borrow_date', title: '借阅日期', width: '110px' },
   { key: 'due_date', title: '应还日期', width: '110px' },
   { key: 'return_date', title: '归还日期', width: '110px' },

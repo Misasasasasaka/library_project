@@ -26,11 +26,14 @@ class BorrowModelTests(TestCase):
             available_copies=2,
             status=Book.Status.ON_SHELF,
         )
+        self.copy1 = self.book.copies.get(copy_no=1)
+        self.copy2 = self.book.copies.get(copy_no=2)
 
     def test_borrow_decrements_available_copies(self):
         borrow = Borrow(
             user=self.user,
             book=self.book,
+            copy=self.copy1,
             due_date=timezone.localdate() + timedelta(days=14),
         )
         borrow.full_clean()
@@ -43,6 +46,7 @@ class BorrowModelTests(TestCase):
         borrow = Borrow.objects.create(
             user=self.user,
             book=self.book,
+            copy=self.copy1,
             due_date=timezone.localdate() + timedelta(days=14),
             status=Borrow.Status.BORROWED,
         )
@@ -57,10 +61,11 @@ class BorrowModelTests(TestCase):
         self.book.refresh_from_db()
         self.assertEqual(self.book.available_copies, 2)
 
-    def test_unique_open_borrow_per_user_book(self):
+    def test_user_can_borrow_multiple_copies_of_same_book(self):
         Borrow.objects.create(
             user=self.user,
             book=self.book,
+            copy=self.copy1,
             due_date=timezone.localdate() + timedelta(days=14),
             status=Borrow.Status.BORROWED,
         )
@@ -68,25 +73,36 @@ class BorrowModelTests(TestCase):
         borrow2 = Borrow(
             user=self.user,
             book=self.book,
+            copy=self.copy2,
             due_date=timezone.localdate() + timedelta(days=14),
             status=Borrow.Status.BORROWED,
         )
-        with self.assertRaises(ValidationError):
-            borrow2.full_clean()
+        borrow2.full_clean()
+        borrow2.save()
 
-    def test_borrow_fails_when_no_stock(self):
-        self.book.available_copies = 0
-        self.book.save()
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.available_copies, 0)
 
-        borrow = Borrow(
+    def test_unique_open_borrow_per_copy(self):
+        Borrow.objects.create(
             user=self.user,
             book=self.book,
+            copy=self.copy1,
             due_date=timezone.localdate() + timedelta(days=14),
             status=Borrow.Status.BORROWED,
         )
-        borrow.full_clean()
+
+        User = get_user_model()
+        user2 = User.objects.create_user(username="user2", password="pass12345")
+        borrow = Borrow(
+            user=user2,
+            book=self.book,
+            copy=self.copy1,
+            due_date=timezone.localdate() + timedelta(days=14),
+            status=Borrow.Status.BORROWED,
+        )
         with self.assertRaises(ValidationError):
-            borrow.save()
+            borrow.full_clean()
 
 
 @override_settings(
@@ -109,11 +125,13 @@ class OverdueEmailCommandTests(TestCase):
             available_copies=1,
             status=Book.Status.ON_SHELF,
         )
+        self.copy1 = self.book.copies.get(copy_no=1)
 
     def test_send_overdue_emails_creates_log_and_dedupes(self):
         Borrow.objects.create(
             user=self.user,
             book=self.book,
+            copy=self.copy1,
             due_date=timezone.localdate() - timedelta(days=1),
             status=Borrow.Status.BORROWED,
         )
@@ -130,6 +148,7 @@ class OverdueEmailCommandTests(TestCase):
         Borrow.objects.create(
             user=self.user,
             book=self.book,
+            copy=self.copy1,
             due_date=timezone.localdate() - timedelta(days=1),
             status=Borrow.Status.BORROWED,
         )

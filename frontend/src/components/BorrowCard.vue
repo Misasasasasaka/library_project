@@ -16,7 +16,12 @@
 
       <!-- 信息 -->
       <div class="flex-1 min-w-0">
-        <h4 class="font-medium text-text-primary truncate">{{ borrow.book?.title }}</h4>
+        <h4 class="font-medium text-text-primary truncate">
+          {{ borrow.book?.title }}
+          <span v-if="borrow.copy?.code" class="ml-2 font-mono text-xs bg-sidebar px-2 py-0.5 rounded">
+            {{ borrow.copy.code }}
+          </span>
+        </h4>
         <p class="text-sm text-text-muted mt-1">
           借阅: {{ formatDate(borrow.borrow_date) }} · 应还: {{ formatDate(borrow.due_date) }}
         </p>

@@ -8,7 +8,8 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods
 
 from .admin_csv import export_books_to_csv, import_books_from_csv, wrap_uploaded_file
-from .models import Book, Category
+from .models import Book, BookCopy, Category
+from borrows.models import Borrow
 
 
 def _json_response(payload, *, status=200):
@@ -205,14 +206,7 @@ def books_collection(request):
     if total_copies < 0:
         return _json_error("total_copies 不能为负数", status=400)
 
-    available_copies = data.get("available_copies")
-    if available_copies is None:
-        available_copies = total_copies
-    available_copies = int(available_copies)
-    if available_copies < 0:
-        return _json_error("available_copies 不能为负数", status=400)
-    if available_copies > total_copies:
-        return _json_error("available_copies 不能大于 total_copies", status=400)
+    available_copies = total_copies
 
     status = (data.get("status") or Book.Status.ON_SHELF).strip()
 
@@ -296,29 +290,22 @@ def book_item(request, book_id: int):
                 return _json_error("category_id 不存在", status=400)
 
     if "total_copies" in data or "available_copies" in data:
-        new_total = book.total_copies
-        new_available = book.available_copies
+        if "available_copies" in data and "total_copies" not in data:
+            return _json_error("available_copies 不支持直接修改", status=400)
 
         if "total_copies" in data:
             new_total = int(data.get("total_copies") or 0)
             if new_total < 0:
                 return _json_error("total_copies 不能为负数", status=400)
 
-        borrowed_count = book.total_copies - book.available_copies
-        if "available_copies" in data:
-            new_available = int(data.get("available_copies") or 0)
-        elif "total_copies" in data:
-            new_available = new_total - borrowed_count
+            borrowed_count = Borrow.objects.filter(
+                book_id=book.id, return_date__isnull=True
+            ).count()
+            if new_total < borrowed_count:
+                return _json_error("total_copies 不能小于已借出数量", status=400)
 
-        if new_available < 0:
-            return _json_error("available_copies 不能为负数", status=400)
-        if new_available > new_total:
-            return _json_error("available_copies 不能大于 total_copies", status=400)
-        if new_total < borrowed_count:
-            return _json_error("total_copies 不能小于已借出数量", status=400)
-
-        book.total_copies = new_total
-        book.available_copies = new_available
+            book.total_copies = new_total
+            book.available_copies = new_total - borrowed_count
 
     try:
         book.full_clean()
@@ -327,6 +314,30 @@ def book_item(request, book_id: int):
         return _json_error("更新失败：请检查字段/ISBN 是否重复", status=400)
 
     return _json_response({"ok": True, "book": _serialize_book(book, request=request)})
+
+
+@require_http_methods(["GET"])
+def book_available_copies(request, book_id: int):
+    try:
+        book = Book.objects.get(pk=book_id)
+    except Book.DoesNotExist:
+        return _json_error("图书不存在", status=404)
+
+    if not _is_admin(request.user) and book.status != Book.Status.ON_SHELF:
+        return _json_error("图书不存在", status=404)
+
+    open_copy_ids = Borrow.objects.filter(
+        book_id=book.id,
+        return_date__isnull=True,
+        copy_id__isnull=False,
+    ).values_list("copy_id", flat=True)
+    qs = (
+        BookCopy.objects.filter(book_id=book.id, is_active=True)
+        .exclude(id__in=open_copy_ids)
+        .order_by("copy_no")
+    )
+    results = [{"copy_no": c.copy_no, "code": str(c.copy_no).zfill(3)} for c in qs]
+    return _json_response({"ok": True, "book_id": book.id, "count": len(results), "results": results})
 
 
 @require_http_methods(["POST", "DELETE"])

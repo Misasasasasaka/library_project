@@ -46,6 +46,7 @@
             <thead class="bg-sidebar border-b border-border">
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-medium text-text-secondary">书名</th>
+                <th class="px-6 py-4 text-left text-sm font-medium text-text-secondary">副本</th>
                 <th class="px-6 py-4 text-left text-sm font-medium text-text-secondary">借阅日期</th>
                 <th class="px-6 py-4 text-left text-sm font-medium text-text-secondary">归还日期</th>
                 <th class="px-6 py-4 text-left text-sm font-medium text-text-secondary">状态</th>
@@ -54,6 +55,7 @@
             <tbody class="divide-y divide-border">
               <tr v-for="borrow in historyBorrows" :key="borrow.id" class="hover:bg-sidebar transition-colors">
                 <td class="px-6 py-4 text-sm text-text-primary">{{ borrow.book?.title }}</td>
+                <td class="px-6 py-4 text-sm text-text-muted font-mono">{{ borrow.copy?.code || '-' }}</td>
                 <td class="px-6 py-4 text-sm text-text-muted">{{ formatDate(borrow.borrow_date) }}</td>
                 <td class="px-6 py-4 text-sm text-text-muted">{{ formatDate(borrow.return_date) }}</td>
                 <td class="px-6 py-4">

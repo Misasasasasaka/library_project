@@ -10,6 +10,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods
 
 from books.models import Book
+from books.models import BookCopy
 
 from .admin_csv import export_borrows_to_csv
 from .models import Borrow, OverdueMailLog
@@ -67,6 +68,15 @@ def _serialize_borrow(borrow: Borrow, request=None):
             "isbn": borrow.book.isbn,
             "cover_url": cover_url,
         },
+        "copy": {
+            "id": borrow.copy_id,
+            "copy_no": borrow.copy.copy_no if getattr(borrow, "copy", None) else None,
+            "code": (
+                str(borrow.copy.copy_no).zfill(3)
+                if getattr(borrow, "copy", None) and borrow.copy.copy_no is not None
+                else None
+            ),
+        },
         "borrow_date": borrow.borrow_date.isoformat() if borrow.borrow_date else None,
         "due_date": borrow.due_date.isoformat() if borrow.due_date else None,
         "return_date": borrow.return_date.isoformat() if borrow.return_date else None,
@@ -81,7 +91,7 @@ def borrows_collection(request):
         return _json_error("未登录", status=401)
 
     if request.method == "GET":
-        qs = Borrow.objects.select_related("book", "user").order_by("-borrow_date")
+        qs = Borrow.objects.select_related("book", "copy", "user").order_by("-borrow_date")
 
         if not _is_admin(request.user):
             qs = qs.filter(user_id=request.user.id)
@@ -111,10 +121,27 @@ def borrows_collection(request):
     if book_id is None:
         return _json_error("book_id 为必填", status=400)
 
+    copy_no = data.get("copy_no")
+    if copy_no is None:
+        return _json_error("copy_no 为必填", status=400)
+
     try:
         book = Book.objects.get(pk=int(book_id))
     except Exception:
         return _json_error("book_id 不存在", status=400)
+
+    try:
+        copy_no_int = int(copy_no)
+    except Exception:
+        return _json_error("copy_no 必须是整数", status=400)
+    if copy_no_int <= 0:
+        return _json_error("copy_no 必须大于 0", status=400)
+
+    copy = BookCopy.objects.filter(book_id=book.id, copy_no=copy_no_int, is_active=True).first()
+    if copy is None:
+        return _json_error("副本不存在或不可借", status=400)
+    if Borrow.objects.filter(copy_id=copy.id, return_date__isnull=True).exists():
+        return _json_error("该副本已被借出", status=400)
 
     due_date = None
     if data.get("due_date"):
@@ -127,7 +154,13 @@ def borrows_collection(request):
     if due_date < timezone.localdate():
         return _json_error("due_date 不能早于今天", status=400)
 
-    borrow = Borrow(user=request.user, book=book, due_date=due_date, status=Borrow.Status.BORROWED)
+    borrow = Borrow(
+        user=request.user,
+        book=book,
+        copy=copy,
+        due_date=due_date,
+        status=Borrow.Status.BORROWED,
+    )
     try:
         borrow.full_clean()
         borrow.save()
@@ -135,7 +168,7 @@ def borrows_collection(request):
         message = str(exc) or "借阅失败"
         return _json_error(message, status=400)
 
-    borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
+    borrow = Borrow.objects.select_related("book", "copy", "user").get(pk=borrow.pk)
     return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)}, status=201)
 
 
@@ -145,7 +178,7 @@ def return_borrow(request, borrow_id: int):
         return _json_error("未登录", status=401)
 
     try:
-        borrow = Borrow.objects.select_related("book", "user").get(pk=borrow_id)
+        borrow = Borrow.objects.select_related("book", "copy", "user").get(pk=borrow_id)
     except Borrow.DoesNotExist:
         return _json_error("借阅记录不存在", status=404)
 
@@ -164,7 +197,7 @@ def return_borrow(request, borrow_id: int):
         message = str(exc) or "归还失败"
         return _json_error(message, status=400)
 
-    borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
+    borrow = Borrow.objects.select_related("book", "copy", "user").get(pk=borrow.pk)
     return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)})
 
 
@@ -174,7 +207,7 @@ def renew_borrow(request, borrow_id: int):
         return _json_error("未登录", status=401)
 
     try:
-        borrow = Borrow.objects.select_related("book", "user").get(pk=borrow_id)
+        borrow = Borrow.objects.select_related("book", "copy", "user").get(pk=borrow_id)
     except Borrow.DoesNotExist:
         return _json_error("借阅记录不存在", status=404)
 
@@ -205,7 +238,7 @@ def renew_borrow(request, borrow_id: int):
         message = str(exc) or "续借失败"
         return _json_error(message, status=400)
 
-    borrow = Borrow.objects.select_related("book", "user").get(pk=borrow.pk)
+    borrow = Borrow.objects.select_related("book", "copy", "user").get(pk=borrow.pk)
     return _json_response({"ok": True, "borrow": _serialize_borrow(borrow, request=request)})
 
 

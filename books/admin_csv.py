@@ -3,6 +3,7 @@ import io
 from dataclasses import dataclass
 from datetime import date
 
+from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.dateparse import parse_date
@@ -215,34 +216,31 @@ def import_books_from_csv(
                 total_parsed = _parse_int_field(total_raw, field="total_copies")
                 available_parsed = _parse_int_field(available_raw, field="available_copies")
 
+                Borrow = apps.get_model("borrows", "Borrow")
+
                 if creating:
                     if total_parsed is None:
                         total_parsed = 1
                     if total_parsed < 0:
                         raise ValidationError({"total_copies": "total_copies 不能为负数"})
 
-                    if available_parsed is None:
-                        available_parsed = total_parsed
-                    if available_parsed < 0:
-                        raise ValidationError({"available_copies": "available_copies 不能为负数"})
-                    if available_parsed > total_parsed:
-                        raise ValidationError({"available_copies": "available_copies 不能大于 total_copies"})
+                    expected_available = total_parsed
+                    if available_parsed is not None and available_parsed != expected_available:
+                        raise ValidationError({"available_copies": "available_copies 不支持直接修改（应与 total_copies 相同）"})
 
                     book.total_copies = total_parsed
-                    book.available_copies = available_parsed
+                    book.available_copies = expected_available
                     changed = True
                 else:
                     if total_parsed is not None or available_parsed is not None:
-                        borrowed_count = book.total_copies - book.available_copies
+                        borrowed_count = Borrow.objects.filter(
+                            book_id=book.id, return_date__isnull=True
+                        ).count()
                         new_total = book.total_copies if total_parsed is None else total_parsed
-                        new_available = (
-                            book.available_copies
-                            if available_parsed is None
-                            else available_parsed
-                        )
-
-                        if total_parsed is not None and available_parsed is None:
-                            new_available = new_total - borrowed_count
+                        expected_available = new_total - borrowed_count
+                        if available_parsed is not None and available_parsed != expected_available:
+                            raise ValidationError({"available_copies": "available_copies 不支持直接修改（应为 total_copies - 已借出数量）"})
+                        new_available = expected_available
 
                         if new_total < 0:
                             raise ValidationError({"total_copies": "total_copies 不能为负数"})

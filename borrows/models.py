@@ -25,6 +25,12 @@ class Borrow(models.Model):
         on_delete=models.CASCADE,
         related_name="borrows",
     )
+    copy = models.ForeignKey(
+        "books.BookCopy",
+        verbose_name=_("副本"),
+        on_delete=models.PROTECT,
+        related_name="borrows",
+    )
     borrow_date = models.DateTimeField(_("借阅时间"), auto_now_add=True)
     due_date = models.DateField(_("应还日期"))
     return_date = models.DateTimeField(_("实际归还时间"), null=True, blank=True)
@@ -40,9 +46,9 @@ class Borrow(models.Model):
         ordering = ["-borrow_date"]
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "book"],
+                fields=["copy"],
                 condition=Q(return_date__isnull=True),
-                name="borrow_unique_open_user_book",
+                name="borrow_unique_open_copy",
             ),
             models.CheckConstraint(
                 check=~Q(status="returned") | Q(return_date__isnull=False),
@@ -61,17 +67,25 @@ class Borrow(models.Model):
         if self.status == self.Status.RETURNED and not self.return_date:
             raise ValidationError({"return_date": _("已归还时必须填写实际归还时间")})
 
+        if not self.copy_id:
+            raise ValidationError({"copy": _("copy 为必填")})
+
+        if self.copy_id and self.book_id and getattr(self, "copy", None):
+            if self.copy.book_id != self.book_id:
+                raise ValidationError({"copy": _("副本不属于该图书")})
+
         if self.return_date is None:
             qs = type(self).objects.filter(
-                user_id=self.user_id, book_id=self.book_id, return_date__isnull=True
+                copy_id=self.copy_id, return_date__isnull=True
             )
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
-                raise ValidationError(_("同一用户对同一本书未归还时只能有 1 条借阅记录"))
+                raise ValidationError(_("该副本未归还时只能有 1 条借阅记录"))
 
     def save(self, *args, **kwargs):  # type: ignore[override]
         Book = apps.get_model("books", "Book")
+        BookCopy = apps.get_model("books", "BookCopy")
 
         with transaction.atomic():
             previous = None
@@ -79,18 +93,28 @@ class Borrow(models.Model):
                 previous = (
                     type(self)
                     .objects.filter(pk=self.pk)
-                    .values("status", "book_id")
+                    .values("status", "book_id", "copy_id")
                     .first()
                 )
 
             if previous and previous["book_id"] != self.book_id:
                 raise ValidationError(_("不允许修改借阅记录的图书"))
+            if previous and previous["copy_id"] != self.copy_id:
+                raise ValidationError(_("不允许修改借阅记录的副本"))
 
             is_creating = previous is None
             was_returned = bool(previous and previous["status"] == self.Status.RETURNED)
             will_be_returned = self.status == self.Status.RETURNED
 
             if is_creating and self.status != self.Status.RETURNED:
+                copy = (
+                    BookCopy.objects.select_related("book")
+                    .filter(pk=self.copy_id, book_id=self.book_id, is_active=True)
+                    .first()
+                )
+                if copy is None:
+                    raise ValidationError(_("副本不存在或不可借"))
+
                 updated = (
                     Book.objects.filter(
                         pk=self.book_id,
@@ -111,6 +135,13 @@ class Borrow(models.Model):
 
             if not is_creating and was_returned and (not will_be_returned):
                 self.return_date = None
+                copy = (
+                    BookCopy.objects.select_related("book")
+                    .filter(pk=self.copy_id, book_id=self.book_id, is_active=True)
+                    .first()
+                )
+                if copy is None:
+                    raise ValidationError(_("副本不存在或不可借"))
                 updated = (
                     Book.objects.filter(
                         pk=self.book_id,

@@ -20,14 +20,14 @@
     </div>
 
     <!-- 信息 -->
-    <div class="p-4">
-      <h3 class="font-medium text-text-primary truncate" :title="book.title">
+    <div class="p-3 md:p-4">
+      <h3 class="font-medium text-text-primary truncate text-sm md:text-base" :title="book.title">
         {{ book.title }}
       </h3>
-      <p class="text-sm text-text-muted truncate mt-1">{{ book.author }}</p>
+      <p class="text-xs md:text-sm text-text-muted truncate mt-1">{{ book.author }}</p>
 
       <!-- 状态标签 -->
-      <div class="mt-3">
+      <div class="mt-2 md:mt-3">
         <span
           :class="[
             'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg',

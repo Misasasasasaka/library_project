@@ -1,8 +1,8 @@
 <template>
-  <div class="bg-white rounded-2xl border border-border p-4 hover:shadow-sm transition-shadow">
-    <div class="flex gap-4">
+  <div class="bg-white rounded-2xl border border-border p-3 md:p-4 hover:shadow-sm transition-shadow">
+    <div class="flex gap-3 md:gap-4">
       <!-- 封面 -->
-      <div class="w-20 h-28 bg-sidebar rounded-xl flex-shrink-0 overflow-hidden">
+      <div class="w-16 h-[5.5rem] md:w-20 md:h-28 bg-sidebar rounded-xl flex-shrink-0 overflow-hidden">
         <img
           v-if="borrow.book?.cover_url"
           :src="borrow.book.cover_url"
@@ -16,13 +16,13 @@
 
       <!-- 信息 -->
       <div class="flex-1 min-w-0">
-        <h4 class="font-medium text-text-primary truncate">
+        <h4 class="font-medium text-text-primary truncate text-sm md:text-base">
           {{ borrow.book?.title }}
           <span v-if="borrow.copy?.code" class="ml-2 font-mono text-xs bg-sidebar px-2 py-0.5 rounded">
             {{ borrow.copy.code }}
           </span>
         </h4>
-        <p class="text-sm text-text-muted mt-1">
+        <p class="text-xs md:text-sm text-text-muted mt-1">
           借阅: {{ formatDate(borrow.borrow_date) }} · 应还: {{ formatDate(borrow.due_date) }}
         </p>
 

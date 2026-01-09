@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-semibold text-text-primary">图书管理</h1>
-      <div class="flex gap-3">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-8">
+      <h1 class="text-xl md:text-2xl font-semibold text-text-primary">图书管理</h1>
+      <div class="flex flex-wrap gap-2 md:gap-3">
         <button @click="openAddModal" class="btn-primary">
           + 新增图书
         </button>
@@ -16,7 +16,7 @@
     </div>
 
     <!-- 搜索和筛选 -->
-    <div class="flex items-center gap-4 mb-6">
+    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-6">
       <div class="flex-1 relative">
         <input
           v-model="searchKeyword"
@@ -27,7 +27,7 @@
         />
         <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" :stroke-width="2" />
       </div>
-      <select v-model="statusFilter" class="input w-40" @change="loadBooks">
+      <select v-model="statusFilter" class="input w-full md:w-40" @change="loadBooks">
         <option value="">全部状态</option>
         <option value="on_shelf">已上架</option>
         <option value="off_shelf">已下架</option>
@@ -94,7 +94,7 @@
       @close="closeFormModal"
     >
       <form @submit.prevent="handleSubmit">
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label class="label">ISBN <span class="text-red-500">*</span></label>
             <input v-model="form.isbn" type="text" class="input" required />

@@ -4,7 +4,7 @@ import time
 from html import escape
 
 from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout, update_session_auth_hash
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
@@ -337,3 +337,38 @@ def me(request):
     if not request.user.is_authenticated:
         return _json_error("未登录", status=401)
     return _json_response({"ok": True, "user": _serialize_user(request.user)})
+
+
+@require_http_methods(["POST"])
+def change_password(request):
+    if not request.user.is_authenticated:
+        return _json_error("未登录", status=401)
+
+    data = _parse_json(request)
+    if data is None:
+        return _json_error("JSON 格式错误", status=400)
+
+    old_password = data.get("old_password") or ""
+    new_password = data.get("new_password") or ""
+    confirm_password = data.get("confirm_password") or ""
+
+    if not old_password:
+        return _json_error("old_password 不能为空", status=400)
+    if not new_password:
+        return _json_error("new_password 不能为空", status=400)
+    if not confirm_password:
+        return _json_error("confirm_password 不能为空", status=400)
+    if new_password != confirm_password:
+        return _json_error("两次输入的新密码不一致", status=400)
+    if len(new_password) < 6:
+        return _json_error("新密码长度至少为6位", status=400)
+    if old_password == new_password:
+        return _json_error("新密码不能与旧密码相同", status=400)
+
+    if not request.user.check_password(old_password):
+        return _json_error("旧密码错误", status=400)
+
+    request.user.set_password(new_password)
+    request.user.save(update_fields=["password"])
+    update_session_auth_hash(request, request.user)
+    return _json_response({"ok": True})

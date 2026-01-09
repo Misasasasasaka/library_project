@@ -1,9 +1,9 @@
 <template>
   <div>
-    <h1 class="text-2xl font-semibold text-text-primary mb-8">逾期通知</h1>
+    <h1 class="text-xl md:text-2xl font-semibold text-text-primary mb-4 md:mb-8">逾期通知</h1>
 
       <!-- 逾期用户预览 -->
-      <section class="bg-white rounded-2xl border border-border p-8 mb-8">
+      <section class="bg-white rounded-2xl border border-border p-4 md:p-8 mb-4 md:mb-8">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-medium text-text-primary">逾期用户预览</h2>
           <button @click="loadPreview" :disabled="loadingPreview" class="btn-secondary text-sm">
@@ -50,7 +50,7 @@
       </section>
 
       <!-- 发送选项 -->
-      <section class="bg-white rounded-2xl border border-border p-8">
+      <section class="bg-white rounded-2xl border border-border p-4 md:p-8">
         <h2 class="text-lg font-medium text-text-primary mb-6">发送选项</h2>
 
         <div class="space-y-4 mb-8">
@@ -75,7 +75,7 @@
         <!-- 发送结果 -->
         <div v-if="sendResult" class="mt-8 p-6 bg-sidebar rounded-xl">
           <h3 class="font-medium text-text-primary mb-4">发送结果</h3>
-          <div class="grid grid-cols-4 gap-4 text-center">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div class="text-2xl font-semibold text-emerald-600">{{ sendResult.sent }}</div>
               <div class="text-xs text-text-muted mt-1">已发送</div>

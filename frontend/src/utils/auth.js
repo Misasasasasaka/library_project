@@ -64,6 +64,17 @@ export async function sendRegisterEmailCode(mail, captcha) {
 }
 
 /**
+ * 修改密码
+ */
+export async function changePassword(oldPassword, newPassword, confirmPassword) {
+  return post('/api/auth/password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+    confirm_password: confirmPassword
+  })
+}
+
+/**
  * 登出
  */
 export async function logout() {

@@ -1,8 +1,8 @@
 <template>
   <div>
     <!-- 搜索栏 -->
-    <div class="mb-8">
-      <div class="flex items-center gap-4">
+    <div class="mb-4 md:mb-8">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
         <div class="flex-1 relative">
           <input
             v-model="searchKeyword"
@@ -23,7 +23,7 @@
     </div>
 
     <!-- 分类标签 -->
-    <div class="mb-8 flex flex-wrap gap-2">
+    <div class="mb-4 md:mb-8 flex flex-wrap gap-2">
       <button
         v-for="cat in categories"
         :key="cat.id ?? 'all'"
@@ -50,7 +50,7 @@
       <p class="text-lg">暂无图书</p>
     </div>
 
-    <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+    <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
       <BookCard
         v-for="book in pagedBooks"
         :key="book.id"

@@ -4,17 +4,17 @@
     <button
       v-if="!isOpen"
       @click="openChat"
-      class="fixed bottom-6 right-6 w-14 h-14 bg-claude-500 text-white rounded-full shadow-lg hover:bg-claude-600 transition-all duration-200 hover:scale-105 flex items-center justify-center z-50"
+      class="fixed bottom-4 right-4 md:bottom-6 md:right-6 w-14 h-14 md:w-14 md:h-14 bg-claude-500 text-white rounded-full shadow-lg hover:bg-claude-600 transition-all duration-200 hover:scale-105 flex items-center justify-center z-50"
       title="AI 图书推荐"
     >
-      <MessageCircle class="w-6 h-6" :stroke-width="2" />
+      <MessageCircle class="w-7 h-7 md:w-6 md:h-6" :stroke-width="2" />
     </button>
 
     <!-- 聊天窗口 -->
     <Transition name="chat">
       <div
         v-if="isOpen"
-        class="fixed bottom-6 right-6 w-96 h-[32rem] bg-white rounded-2xl shadow-2xl border border-border flex flex-col z-50 overflow-hidden"
+        class="fixed inset-4 md:inset-auto md:bottom-6 md:right-6 md:w-96 md:h-[32rem] bg-white rounded-2xl shadow-2xl border border-border flex flex-col z-50 overflow-hidden"
       >
         <!-- 标题栏 -->
         <div class="flex items-center justify-between px-4 py-3 bg-claude-500 text-white">

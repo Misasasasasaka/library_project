@@ -10,6 +10,7 @@ const BookDetail = () => import('@/pages/book-detail/App.vue')
 const Login = () => import('@/pages/login/App.vue')
 const Register = () => import('@/pages/register/App.vue')
 const MyBorrows = () => import('@/pages/my-borrows/App.vue')
+const Account = () => import('@/pages/account/App.vue')
 const AdminBooks = () => import('@/pages/admin-books/App.vue')
 const AdminBorrows = () => import('@/pages/admin-borrows/App.vue')
 const AdminImport = () => import('@/pages/admin-import/App.vue')
@@ -52,6 +53,12 @@ const routes = [
         path: 'my/borrows/',
         name: 'my-borrows',
         component: MyBorrows,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'my/account/',
+        name: 'my-account',
+        component: Account,
         meta: { requiresAuth: true }
       },
       {

@@ -14,10 +14,10 @@
       图书不存在
     </div>
 
-    <div v-else class="bg-white rounded-2xl border border-border p-8">
-      <div class="flex gap-10">
+    <div v-else class="bg-white rounded-2xl border border-border p-4 md:p-8">
+      <div class="flex flex-col md:flex-row gap-6 md:gap-10">
         <!-- 封面 -->
-        <div class="w-56 flex-shrink-0">
+        <div class="w-40 md:w-56 flex-shrink-0 mx-auto md:mx-0">
           <div class="aspect-[3/4] bg-sidebar rounded-2xl overflow-hidden shadow-sm">
             <img
               v-if="book.cover_url"
@@ -33,7 +33,7 @@
 
         <!-- 信息 -->
         <div class="flex-1">
-          <h1 class="text-3xl font-semibold text-text-primary">{{ book.title }}</h1>
+          <h1 class="text-2xl md:text-3xl font-semibold text-text-primary text-center md:text-left">{{ book.title }}</h1>
 
           <div class="mt-6 space-y-3 text-text-secondary">
             <p><span class="text-text-muted">作者：</span>{{ book.author }}</p>

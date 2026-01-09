@@ -1,14 +1,14 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-semibold text-text-primary">借阅记录</h1>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-8">
+      <h1 class="text-xl md:text-2xl font-semibold text-text-primary">借阅记录</h1>
       <button @click="exportCsv" class="btn-secondary">
         导出 CSV
       </button>
     </div>
 
     <!-- 搜索和筛选 -->
-    <div class="flex items-center gap-4 mb-6">
+    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-6">
       <div class="flex-1 relative">
         <input
           v-model="searchKeyword"
@@ -19,7 +19,7 @@
         />
         <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" :stroke-width="2" />
       </div>
-      <select v-model="statusFilter" class="input w-40" @change="loadBorrows">
+      <select v-model="statusFilter" class="input w-full md:w-40" @change="loadBorrows">
         <option value="">全部状态</option>
         <option value="borrowed">借阅中</option>
         <option value="overdue">逾期</option>

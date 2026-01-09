@@ -69,3 +69,62 @@ class AuthCaptchaEmailCodeTests(TestCase):
         me = self.client.get("/api/auth/me")
         self.assertEqual(me.status_code, 200)
         self.assertTrue(me.json().get("ok"))
+
+
+class AuthPasswordChangeTests(TestCase):
+    def test_change_password_requires_login(self):
+        resp = self.client.post(
+            "/api/auth/password",
+            data=json.dumps({"old_password": "x", "new_password": "y", "confirm_password": "y"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 401)
+        self.assertFalse(resp.json().get("ok"))
+
+    def test_change_password_success(self):
+        User = get_user_model()
+        user = User.objects.create_user(username="user1", password="pass12345", mail="user1@example.com")
+        self.client.force_login(user)
+
+        resp = self.client.post(
+            "/api/auth/password",
+            data=json.dumps(
+                {
+                    "old_password": "pass12345",
+                    "new_password": "newpass123",
+                    "confirm_password": "newpass123",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json().get("ok"))
+
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("newpass123"))
+
+        me = self.client.get("/api/auth/me")
+        self.assertEqual(me.status_code, 200)
+        self.assertTrue(me.json().get("ok"))
+
+    def test_change_password_rejects_wrong_old_password(self):
+        User = get_user_model()
+        user = User.objects.create_user(username="user1", password="pass12345", mail="user1@example.com")
+        self.client.force_login(user)
+
+        resp = self.client.post(
+            "/api/auth/password",
+            data=json.dumps(
+                {
+                    "old_password": "wrong",
+                    "new_password": "newpass123",
+                    "confirm_password": "newpass123",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.json().get("ok"))
+
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("pass12345"))

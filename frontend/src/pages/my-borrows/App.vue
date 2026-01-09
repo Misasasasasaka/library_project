@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-semibold text-text-primary mb-8">我的借阅</h1>
+    <h1 class="text-xl md:text-2xl font-semibold text-text-primary mb-4 md:mb-8">我的借阅</h1>
 
     <div v-if="loading" class="text-center py-16 text-text-muted">
       加载中...
@@ -41,7 +41,7 @@
           暂无历史记录
         </div>
 
-        <div v-else class="bg-white rounded-2xl border border-border overflow-hidden">
+        <div v-else class="bg-white rounded-2xl border border-border overflow-x-auto">
           <table class="w-full">
             <thead class="bg-sidebar border-b border-border">
               <tr>

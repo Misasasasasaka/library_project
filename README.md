@@ -47,6 +47,25 @@ python3 manage.py migrate
 python3 manage.py createsuperuser
 ```
 
+### 设置管理员角色（role）
+
+本项目的自定义用户模型 `users.User` 额外使用 `role` 字段区分普通用户/管理员，前端管理端以 `role=admin` 作为管理员判断条件（仅创建 superuser 不会自动把 `role` 改成 `admin`）。
+
+创建 superuser 后，使用 Django shell 将该账号的 `role` 改为 `admin`：
+
+```bash
+python3 manage.py shell
+```
+
+```python
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+u = User.objects.get(username="你的用户名")
+u.role = "admin"
+u.save(update_fields=["role"])
+```
+
 默认使用 SQLite：`db.sqlite3`。生产环境建议切换到 PostgreSQL/MySQL（需自行调整 `library_project/settings.py`）。
 
 ## 4) 构建前端（生产环境必做）

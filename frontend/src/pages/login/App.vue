@@ -11,7 +11,7 @@
       </router-link>
 
       <!-- 登录表单 -->
-      <div class="bg-white rounded-2xl shadow-sm border border-border p-8">
+      <div class="bg-white rounded-2xl shadow-sm border border-border p-6 md:p-8">
         <form @submit.prevent="handleSubmit">
           <div class="space-y-5">
             <div>

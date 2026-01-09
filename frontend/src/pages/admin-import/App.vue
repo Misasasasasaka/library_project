@@ -1,10 +1,10 @@
 <template>
   <div>
-    <h1 class="text-2xl font-semibold text-text-primary mb-8">导入 / 导出</h1>
+    <h1 class="text-xl md:text-2xl font-semibold text-text-primary mb-4 md:mb-8">导入 / 导出</h1>
 
-    <div class="grid grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
       <!-- 导出 -->
-      <section class="bg-white rounded-2xl border border-border p-8">
+      <section class="bg-white rounded-2xl border border-border p-4 md:p-8">
         <h2 class="text-lg font-medium text-text-primary mb-4">导出数据</h2>
         <p class="text-sm text-text-muted mb-6">将数据导出为 CSV 文件，可用于备份或在其他系统中使用。</p>
 
@@ -21,7 +21,7 @@
       </section>
 
       <!-- 导入 -->
-      <section class="bg-white rounded-2xl border border-border p-8">
+      <section class="bg-white rounded-2xl border border-border p-4 md:p-8">
         <h2 class="text-lg font-medium text-text-primary mb-4">导入数据</h2>
         <p class="text-sm text-text-muted mb-6">上传 CSV 文件批量导入图书数据。支持新增和更新（按 ISBN 匹配）。</p>
 
@@ -54,10 +54,10 @@
     </div>
 
     <!-- 导入结果 -->
-    <section v-if="importResult" class="mt-8 bg-white rounded-2xl border border-border p-8">
+    <section v-if="importResult" class="mt-4 md:mt-8 bg-white rounded-2xl border border-border p-4 md:p-8">
       <h2 class="text-lg font-medium text-text-primary mb-6">导入结果</h2>
 
-      <div class="grid grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="text-center p-5 bg-emerald-50 rounded-xl">
           <div class="text-3xl font-semibold text-emerald-600">{{ importResult.created }}</div>
           <div class="text-sm text-text-muted mt-1">新增</div>

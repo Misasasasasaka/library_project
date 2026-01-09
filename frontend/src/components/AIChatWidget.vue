@@ -65,7 +65,8 @@
             >
               <div
                 v-html="formatMessage(msg.content)"
-                class="text-sm leading-relaxed whitespace-pre-wrap chat-content"
+                class="text-sm leading-relaxed chat-content"
+                @click="handleMessageClick"
               ></div>
             </div>
           </div>
@@ -112,6 +113,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@utils/api'
 import { error as showError } from '@utils/toast'
 import { currentUser } from '@utils/auth'
+import { renderChatMarkdown } from '@utils/markdown'
 import {
   MessageCircle,
   X,
@@ -177,21 +179,20 @@ async function sendMessage() {
 }
 
 function formatMessage(content) {
-  const escaped = escapeHtml(content)
-  // 将 [[书名:ID]] 格式转换为可点击链接
-  return escaped.replace(
-    /\[\[([^\]:]+):(\d+)\]\]/g,
-    '<a href="/books/$2/" class="text-claude-600 hover:text-claude-700 underline font-medium">$1</a>'
-  )
+  return renderChatMarkdown(content)
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+function handleMessageClick(event) {
+  const target = event?.target
+  const link = target?.closest?.('a[data-book-id]')
+  if (!link) return
+
+  const bookId = link.getAttribute('data-book-id')
+  if (!bookId) return
+
+  event.preventDefault()
+  router.push(`/books/${bookId}/`)
+  closeChat()
 }
 
 async function scrollToBottom() {
@@ -226,5 +227,64 @@ watch(messages, () => scrollToBottom(), { deep: true })
 
 :deep(.chat-content a:hover) {
   color: #c56a4c;
+}
+
+:deep(.chat-content p) {
+  margin: 0.25rem 0;
+}
+
+:deep(.chat-content ul),
+:deep(.chat-content ol) {
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+
+:deep(.chat-content li) {
+  margin: 0.15rem 0;
+}
+
+:deep(.chat-content pre) {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 0.75rem;
+  overflow-x: auto;
+}
+
+:deep(.chat-content code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85em;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.35rem;
+}
+
+:deep(.chat-content pre code) {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+:deep(.chat-content blockquote) {
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.75rem;
+  border-left: 3px solid rgba(218, 119, 86, 0.6);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+:deep(.chat-content hr) {
+  margin: 0.75rem 0;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:deep(.chat-content h1),
+:deep(.chat-content h2),
+:deep(.chat-content h3),
+:deep(.chat-content h4),
+:deep(.chat-content h5),
+:deep(.chat-content h6) {
+  margin: 0.5rem 0 0.25rem;
+  font-weight: 600;
 }
 </style>

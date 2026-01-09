@@ -72,54 +72,62 @@ function renderInline(rawText) {
     }
 
     const raw = String(t.value || '')
-    const parts = []
+    const replacements = new Map()
+    let cursor = 0
+    let replaced = ''
+    let replacementIndex = 0
+    const token = (i) => `\uFFF0AILINK${i}\uFFF1`
 
     const linkRe = /\[\[([^\]\n:]+?)\s*:\s*(\d+)\]\]|\[([^\]\n]+)\]\(([^)\n]+)\)/g
-    let cursor = 0
     let m
-
     while ((m = linkRe.exec(raw)) !== null) {
-      const before = raw.slice(cursor, m.index)
-      if (before) parts.push({ type: 'text', value: before })
+      replaced += raw.slice(cursor, m.index)
 
+      // Book link: [[title:id]]
       if (m[1] && m[2]) {
-        parts.push({ type: 'book', title: m[1], id: m[2] })
-      } else if (m[3] && m[4]) {
-        parts.push({ type: 'link', label: m[3], url: m[4] })
+        const id = String(m[2]).trim()
+        const title = String(m[1]).trim()
+        const placeholder = token(replacementIndex++)
+        const titleHtml = renderEmphasis(escapeHtml(title))
+        replacements.set(
+          placeholder,
+          `<a class="ai-book-link" href="/books/${escapeAttr(id)}/" data-book-id="${escapeAttr(id)}">${titleHtml}</a>`
+        )
+        replaced += placeholder
+      }
+
+      // Markdown link: [label](url)
+      if (m[3] && m[4]) {
+        const label = String(m[3])
+        const rawUrl = String(m[4])
+        const safeUrl = sanitizeUrl(rawUrl)
+
+        if (!safeUrl) {
+          replaced += `${label} (${rawUrl})`
+        } else {
+          const placeholder = token(replacementIndex++)
+          const labelHtml = renderEmphasis(escapeHtml(label))
+          const attrs = safeUrl.startsWith('http')
+            ? ' target="_blank" rel="noopener noreferrer"'
+            : ''
+          replacements.set(
+            placeholder,
+            `<a href="${escapeAttr(safeUrl)}"${attrs}>${labelHtml}</a>`
+          )
+          replaced += placeholder
+        }
       }
 
       cursor = m.index + m[0].length
     }
 
-    const rest = raw.slice(cursor)
-    if (rest) parts.push({ type: 'text', value: rest })
+    replaced += raw.slice(cursor)
 
-    return parts.map((p) => {
-      if (p.type === 'text') {
-        return renderEmphasis(escapeHtml(p.value))
-      }
-
-      if (p.type === 'book') {
-        const id = String(p.id || '').trim()
-        const titleHtml = renderEmphasis(escapeHtml(String(p.title || '').trim()))
-        return `<a class="ai-book-link" href="/books/${escapeAttr(id)}/" data-book-id="${escapeAttr(id)}">${titleHtml}</a>`
-      }
-
-      if (p.type === 'link') {
-        const safeUrl = sanitizeUrl(p.url)
-        const labelHtml = renderEmphasis(escapeHtml(p.label))
-        if (!safeUrl) {
-          return `${labelHtml} (${escapeHtml(p.url)})`
-        }
-
-        const attrs = safeUrl.startsWith('http')
-          ? ' target="_blank" rel="noopener noreferrer"'
-          : ''
-        return `<a href="${escapeAttr(safeUrl)}"${attrs}>${labelHtml}</a>`
-      }
-
-      return renderEmphasis(escapeHtml(p.value))
-    }).join('')
+    let out = renderEmphasis(escapeHtml(replaced))
+    for (const [placeholder, html] of replacements.entries()) {
+      out = out.split(placeholder).join(html)
+    }
+    return out
   }).join('')
 }
 

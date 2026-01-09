@@ -78,7 +78,7 @@ function renderInline(rawText) {
     let replacementIndex = 0
     const token = (i) => `\uFFF0AILINK${i}\uFFF1`
 
-    const linkRe = /\[\[([^\]\n:]+?)\s*:\s*(\d+)\]\]|\[([^\]\n]+)\]\(([^)\n]+)\)/g
+    const linkRe = /\[\[([^\]\n:：]+?)\s*[:：]\s*(\d+)\s*\]\]|\[([^\]\n]+)\]\(([^)\n]+)\)/g
     let m
     while ((m = linkRe.exec(raw)) !== null) {
       replaced += raw.slice(cursor, m.index)

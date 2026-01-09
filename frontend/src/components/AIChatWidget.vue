@@ -183,11 +183,23 @@ function formatMessage(content) {
 }
 
 function handleMessageClick(event) {
-  const target = event?.target
-  const link = target?.closest?.('a[data-book-id]')
+  let target = event?.target
+  if (!target) return
+
+  if (target.nodeType === 3) {
+    target = target.parentElement
+  }
+
+  const link = target?.closest?.('a')
   if (!link) return
 
-  const bookId = link.getAttribute('data-book-id')
+  let bookId = link.getAttribute('data-book-id')
+  if (!bookId) {
+    const href = link.getAttribute('href') || ''
+    const match = href.match(/^\/books\/(\d+)\/?$/)
+    bookId = match ? match[1] : ''
+  }
+
   if (!bookId) return
 
   event.preventDefault()

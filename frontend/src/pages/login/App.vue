@@ -35,6 +35,26 @@
                 placeholder="请输入密码"
               />
             </div>
+
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label class="label">验证码</label>
+                <input
+                  v-model="form.captcha"
+                  type="text"
+                  required
+                  class="input"
+                  placeholder="请输入图片验证码"
+                />
+              </div>
+              <img
+                :src="captchaUrl"
+                class="h-11 w-32 rounded-xl border border-border cursor-pointer select-none"
+                alt="验证码"
+                title="点击刷新验证码"
+                @click="refreshCaptcha"
+              />
+            </div>
           </div>
 
           <div v-if="error" class="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl">
@@ -70,11 +90,13 @@ const router = useRouter()
 
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  captcha: ''
 })
 
 const loading = ref(false)
 const error = ref('')
+const captchaUrl = ref('')
 
 onMounted(async () => {
   try {
@@ -82,17 +104,25 @@ onMounted(async () => {
   } catch (e) {
     console.error('获取 CSRF Token 失败')
   }
+
+  refreshCaptcha()
 })
+
+function refreshCaptcha() {
+  captchaUrl.value = `/api/auth/captcha?t=${Date.now()}`
+}
 
 async function handleSubmit() {
   error.value = ''
   loading.value = true
 
   try {
-    await login(form.username, form.password)
+    await login(form.username, form.password, form.captcha)
     router.push('/books/')
   } catch (e) {
     error.value = e.message || '登录失败，请检查用户名和密码'
+    form.captcha = ''
+    refreshCaptcha()
   } finally {
     loading.value = false
   }

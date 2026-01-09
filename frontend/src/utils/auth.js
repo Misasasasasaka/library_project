@@ -35,8 +35,8 @@ export async function initAuth() {
 /**
  * 登录
  */
-export async function login(username, password) {
-  const data = await post('/api/auth/login', { username, password })
+export async function login(username, password, captcha) {
+  const data = await post('/api/auth/login', { username, password, captcha })
   user.value = data.user
   return data.user
 }
@@ -44,10 +44,23 @@ export async function login(username, password) {
 /**
  * 注册
  */
-export async function register(username, password, mail) {
-  const data = await post('/api/auth/register', { username, password, mail })
+export async function register(username, password, mail, emailCode, captcha) {
+  const data = await post('/api/auth/register', {
+    username,
+    password,
+    mail,
+    email_code: emailCode,
+    captcha
+  })
   user.value = data.user
   return data.user
+}
+
+/**
+ * 发送注册邮箱验证码
+ */
+export async function sendRegisterEmailCode(mail, captcha) {
+  return post('/api/auth/email-code', { mail, captcha })
 }
 
 /**

@@ -13,12 +13,55 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+try:
+    from dotenv import load_dotenv
+except Exception:  # pragma: no cover
+    load_dotenv = None
+
+
+def _load_env_file(env_path: Path) -> None:
+    try:
+        content = env_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return
+    except OSError:
+        return
+
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\r")
+        if not key or key in os.environ:
+            continue
+
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        else:
+            for sep in (" #", "\t#"):
+                idx = value.find(sep)
+                if idx != -1:
+                    value = value[:idx].rstrip()
+                    break
+
+        os.environ.setdefault(key, value)
+
+
+_ENV_PATH = BASE_DIR / ".env"
+if load_dotenv:
+    load_dotenv(_ENV_PATH)
+else:  # pragma: no cover
+    _load_env_file(_ENV_PATH)
 
 
 # Quick-start development settings - unsuitable for production

@@ -30,9 +30,55 @@
               <input
                 v-model="form.mail"
                 type="email"
+                required
                 class="input"
-                placeholder="请输入邮箱（可选，用于接收通知）"
+                placeholder="请输入邮箱"
               />
+            </div>
+
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label class="label">验证码</label>
+                <input
+                  v-model="form.captcha"
+                  type="text"
+                  required
+                  class="input"
+                  placeholder="请输入图片验证码"
+                />
+              </div>
+              <img
+                :src="captchaUrl"
+                class="h-11 w-32 rounded-xl border border-border cursor-pointer select-none"
+                alt="验证码"
+                title="点击刷新验证码"
+                @click="refreshCaptcha"
+              />
+            </div>
+
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label class="label">邮箱验证码</label>
+                <input
+                  v-model="form.emailCode"
+                  type="text"
+                  required
+                  class="input"
+                  placeholder="请输入邮箱验证码"
+                />
+              </div>
+              <button
+                type="button"
+                class="btn-secondary h-11 whitespace-nowrap"
+                :disabled="sendingCode || countdown > 0"
+                @click="handleSendEmailCode"
+              >
+                {{
+                  countdown > 0
+                    ? `${countdown}s`
+                    : (sendingCode ? '发送中...' : '发送验证码')
+                }}
+              </button>
             </div>
 
             <div>
@@ -82,10 +128,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { get } from '@utils/api'
-import { register } from '@utils/auth'
+import { register, sendRegisterEmailCode } from '@utils/auth'
 import { Library } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -93,12 +139,18 @@ const router = useRouter()
 const form = reactive({
   username: '',
   mail: '',
+  captcha: '',
+  emailCode: '',
   password: '',
   confirmPassword: ''
 })
 
 const loading = ref(false)
 const error = ref('')
+const captchaUrl = ref('')
+const sendingCode = ref(false)
+const countdown = ref(0)
+let countdownTimer = null
 
 onMounted(async () => {
   try {
@@ -106,7 +158,54 @@ onMounted(async () => {
   } catch (e) {
     console.error('获取 CSRF Token 失败')
   }
+
+  refreshCaptcha()
 })
+
+onBeforeUnmount(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+})
+
+function refreshCaptcha() {
+  captchaUrl.value = `/api/auth/captcha?t=${Date.now()}`
+}
+
+async function handleSendEmailCode() {
+  error.value = ''
+
+  if (!form.mail) {
+    error.value = '请输入邮箱'
+    return
+  }
+
+  if (!form.captcha) {
+    error.value = '请输入图片验证码'
+    return
+  }
+
+  sendingCode.value = true
+  try {
+    await sendRegisterEmailCode(form.mail, form.captcha)
+    countdown.value = 60
+    if (countdownTimer) clearInterval(countdownTimer)
+    countdownTimer = setInterval(() => {
+      countdown.value = Math.max(0, countdown.value - 1)
+      if (countdown.value <= 0 && countdownTimer) {
+        clearInterval(countdownTimer)
+        countdownTimer = null
+      }
+    }, 1000)
+  } catch (e) {
+    error.value = e.message || '验证码发送失败，请稍后重试'
+    form.captcha = ''
+    refreshCaptcha()
+  } finally {
+    sendingCode.value = false
+  }
+}
 
 async function handleSubmit() {
   error.value = ''
@@ -124,10 +223,12 @@ async function handleSubmit() {
   loading.value = true
 
   try {
-    await register(form.username, form.password, form.mail || undefined)
+    await register(form.username, form.password, form.mail, form.emailCode, form.captcha)
     router.push('/books/')
   } catch (e) {
     error.value = e.message || '注册失败，请稍后重试'
+    form.captcha = ''
+    refreshCaptcha()
   } finally {
     loading.value = false
   }

@@ -9,7 +9,7 @@
 ## 1) 获取代码与创建虚拟环境
 
 ```bash
-git clone <your-repo>
+git clone https://github.com/Misasasasasaka/library_project.git
 cd library_project
 
 python3 -m venv .venv

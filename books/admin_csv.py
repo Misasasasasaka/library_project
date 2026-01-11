@@ -250,9 +250,7 @@ def import_books_from_csv(
                                 changed = True
 
                 total_raw = _normalize_cell(row.get("total_copies"))
-                available_raw = _normalize_cell(row.get("available_copies"))
                 total_parsed = _parse_int_field(total_raw, field="total_copies")
-                available_parsed = _parse_int_field(available_raw, field="available_copies")
 
                 Borrow = apps.get_model("borrows", "Borrow")
 
@@ -262,23 +260,17 @@ def import_books_from_csv(
                     if total_parsed < 0:
                         raise ValidationError({"total_copies": "total_copies 不能为负数"})
 
-                    expected_available = total_parsed
-                    if available_parsed is not None and available_parsed != expected_available:
-                        raise ValidationError({"available_copies": "available_copies 不支持直接修改（应与 total_copies 相同）"})
-
                     book.total_copies = total_parsed
-                    book.available_copies = expected_available
+                    # 导入时忽略 available_copies：新建默认全可借
+                    book.available_copies = total_parsed
                     changed = True
                 else:
-                    if total_parsed is not None or available_parsed is not None:
+                    if total_parsed is not None:
                         borrowed_count = Borrow.objects.filter(
                             book_id=book.id, return_date__isnull=True
                         ).count()
-                        new_total = book.total_copies if total_parsed is None else total_parsed
-                        expected_available = new_total - borrowed_count
-                        if available_parsed is not None and available_parsed != expected_available:
-                            raise ValidationError({"available_copies": "available_copies 不支持直接修改（应为 total_copies - 已借出数量）"})
-                        new_available = expected_available
+                        new_total = total_parsed
+                        new_available = new_total - borrowed_count
 
                         if new_total < 0:
                             raise ValidationError({"total_copies": "total_copies 不能为负数"})

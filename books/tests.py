@@ -90,7 +90,7 @@ class BookCsvImportTests(TestCase):
 
         csv_content = (
             "isbn,title,author,publisher,publish_date,description,category_name,total_copies,available_copies,location,status\n"
-            "ISBN-CSV-0002,,,,,,,6,,,\n"
+            "ISBN-CSV-0002,,,,,,,6,999,,\n"
         )
         result = import_books_from_csv(io.StringIO(csv_content))
         self.assertTrue(result["ok"])
@@ -99,6 +99,20 @@ class BookCsvImportTests(TestCase):
         book.refresh_from_db()
         self.assertEqual(book.total_copies, 6)
         self.assertEqual(book.available_copies, 4)
+
+    def test_import_ignores_available_copies_on_create(self):
+        csv_content = (
+            "isbn,title,author,publisher,publish_date,description,category_name,total_copies,available_copies,location,status\n"
+            "ISBN-CSV-0005,Title,Author,,,,,10,8,,\n"
+        )
+        result = import_books_from_csv(io.StringIO(csv_content))
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["has_errors"])
+        self.assertEqual(result["created"], 1)
+
+        book = Book.objects.get(isbn="ISBN-CSV-0005")
+        self.assertEqual(book.total_copies, 10)
+        self.assertEqual(book.available_copies, 10)
 
     def test_import_status_accepts_chinese_values(self):
         csv_content = (

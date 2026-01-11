@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.db.models.deletion import ProtectedError
 from django.views.decorators.http import require_http_methods
 
 from .admin_csv import export_books_to_csv, import_books_from_csv, wrap_uploaded_file
@@ -249,7 +250,10 @@ def book_item(request, book_id: int):
         return _json_error("无权限", status=403)
 
     if request.method == "DELETE":
-        book.delete()
+        try:
+            book.delete()
+        except ProtectedError:
+            return _json_error("该图书存在关联数据，暂无法删除（建议先下架）", status=400)
         return _json_response({"ok": True})
 
     data = _parse_json(request)

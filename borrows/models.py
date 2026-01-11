@@ -28,7 +28,7 @@ class Borrow(models.Model):
     copy = models.ForeignKey(
         "books.BookCopy",
         verbose_name=_("副本"),
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="borrows",
     )
     borrow_date = models.DateTimeField(_("借阅时间"), auto_now_add=True)

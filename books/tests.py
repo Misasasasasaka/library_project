@@ -125,3 +125,30 @@ class BookCsvImportTests(TestCase):
         msg = (result.get("errors") or [{}])[0].get("message") or ""
         self.assertIn("status", msg)
         self.assertNotIn("{", msg)
+
+    def test_can_delete_book_even_with_borrow_history(self):
+        User = get_user_model()
+        user = User.objects.create_user(username="user1", password="pass12345")
+        book = Book.objects.create(
+            title="Delete Title",
+            author="Delete Author",
+            isbn="ISBN-DELETE-0001",
+            total_copies=1,
+            available_copies=1,
+            status=Book.Status.ON_SHELF,
+        )
+        copy = book.copies.get(copy_no=1)
+
+        Borrow.objects.create(
+            user=user,
+            book=book,
+            copy=copy,
+            due_date=timezone.localdate() + timedelta(days=14),
+            return_date=timezone.now(),
+            status=Borrow.Status.RETURNED,
+        )
+
+        book.delete()
+
+        self.assertFalse(Book.objects.filter(pk=book.id).exists())
+        self.assertFalse(Borrow.objects.filter(book_id=book.id).exists())

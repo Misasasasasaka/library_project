@@ -99,3 +99,29 @@ class BookCsvImportTests(TestCase):
         book.refresh_from_db()
         self.assertEqual(book.total_copies, 6)
         self.assertEqual(book.available_copies, 4)
+
+    def test_import_status_accepts_chinese_values(self):
+        csv_content = (
+            "isbn,title,author,publisher,publish_date,description,category_name,total_copies,available_copies,location,status\n"
+            "ISBN-CSV-0003,Title,Author,,,,,,,,下架\n"
+        )
+        result = import_books_from_csv(io.StringIO(csv_content))
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["has_errors"])
+
+        book = Book.objects.get(isbn="ISBN-CSV-0003")
+        self.assertEqual(book.status, Book.Status.OFF_SHELF)
+
+    def test_import_invalid_status_error_is_human_readable(self):
+        csv_content = (
+            "isbn,title,author,publisher,publish_date,description,category_name,total_copies,available_copies,location,status\n"
+            "ISBN-CSV-0004,Title,Author,,,,,,,,bad_status\n"
+        )
+        result = import_books_from_csv(io.StringIO(csv_content))
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["has_errors"])
+        self.assertEqual(result["created"], 0)
+
+        msg = (result.get("errors") or [{}])[0].get("message") or ""
+        self.assertIn("status", msg)
+        self.assertNotIn("{", msg)

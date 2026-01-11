@@ -44,6 +44,42 @@ def _normalize_cell(value) -> str:
     return str(value).strip()
 
 
+def _format_validation_error(exc: ValidationError) -> str:
+    try:
+        message_dict = exc.message_dict
+    except AttributeError:
+        message_dict = None
+
+    if message_dict:
+        parts: list[str] = []
+        for field, messages in message_dict.items():
+            for msg in messages:
+                parts.append(f"{field}: {msg}")
+        if parts:
+            return "; ".join(parts)
+
+    if getattr(exc, "messages", None):
+        return "; ".join(exc.messages)
+    return str(exc)
+
+
+def _normalize_status(value: str) -> str:
+    normalized = value.strip()
+    if normalized == "":
+        return ""
+
+    token = normalized.lower()
+    mapping = {
+        "on_shelf": Book.Status.ON_SHELF,
+        "off_shelf": Book.Status.OFF_SHELF,
+        "上架": Book.Status.ON_SHELF,
+        "下架": Book.Status.OFF_SHELF,
+        "1": Book.Status.ON_SHELF,
+        "0": Book.Status.OFF_SHELF,
+    }
+    return mapping.get(token, normalized)
+
+
 def export_books_to_csv(qs, out) -> None:
     writer = csv.DictWriter(out, fieldnames=BOOK_CSV_COLUMNS, lineterminator="\n")
     writer.writeheader()
@@ -103,10 +139,12 @@ def _apply_status(book: Book, value: str) -> bool:
         return False
     if value == CLEAR_TOKEN:
         raise ValidationError({"status": "status 不支持清空"})
-    if value not in {Book.Status.ON_SHELF, Book.Status.OFF_SHELF}:
-        raise ValidationError({"status": "status 只能为 on_shelf/off_shelf"})
-    if book.status != value:
-        book.status = value
+
+    normalized = _normalize_status(value)
+    if normalized not in {Book.Status.ON_SHELF, Book.Status.OFF_SHELF}:
+        raise ValidationError({"status": "status 只能为 on_shelf/off_shelf（也支持：上架/下架/1/0）"})
+    if book.status != normalized:
+        book.status = normalized
         return True
     return False
 
@@ -282,8 +320,9 @@ def import_books_from_csv(
                     updated += 1
             except ValidationError as exc:
                 skipped += 1
-                message = str(exc)
-                errors.append(ImportErrorItem(row=idx, isbn=isbn, message=message))
+                errors.append(
+                    ImportErrorItem(row=idx, isbn=isbn, message=_format_validation_error(exc))
+                )
 
     if atomic:
         with transaction.atomic():
